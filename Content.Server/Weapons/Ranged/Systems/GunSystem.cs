@@ -24,11 +24,13 @@ using Robust.Shared.Utility;
 using Robust.Shared.Containers;
 using Content.Shared.SS220.Weapons.Ranged.Events;
 using Content.Server.SS220.Shuttles.UI;
+using Content.Shared.Blocking;
 
 namespace Content.Server.Weapons.Ranged.Systems;
 
 public sealed partial class GunSystem : SharedGunSystem
 {
+    [Dependency] private readonly ISharedPlayerManager _player = default!;
     [Dependency] private readonly DamageExamineSystem _damageExamine = default!;
     [Dependency] private readonly PricingSystem _pricing = default!;
     [Dependency] private readonly SharedColorFlashEffectSystem _color = default!;
@@ -250,7 +252,21 @@ public sealed partial class GunSystem : SharedGunSystem
 
                             var hitName = ToPrettyString(hitEntity);
                             if (dmg != null)
-                                dmg = Damageable.TryChangeDamage(hitEntity, dmg * Damageable.UniversalHitscanDamageModifier, origin: user);
+                            {
+                                if(TryComp<BlockingUserComponent>(hitEntity,out var comp))
+                                {
+                                    var ev = new HitScanBlockAttemptEvent(dmg);
+                                    RaiseLocalEvent(hitEntity, ev);
+                                    if(!ev.Cancelled)
+                                    {
+                                        dmg = Damageable.TryChangeDamage(hitEntity, dmg * Damageable.UniversalHitscanDamageModifier, origin: user);
+                                    }
+                                }
+                                else
+                                {
+                                    dmg = Damageable.TryChangeDamage(hitEntity, dmg * Damageable.UniversalHitscanDamageModifier, origin: user);
+                                }
+                            }
 
                             // check null again, as TryChangeDamage returns modified damage values
                             if (dmg != null)

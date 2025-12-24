@@ -7,6 +7,7 @@ using Content.Shared.Damage;
 using Content.Shared.Database;
 using Content.Shared.FixedPoint;
 using Content.Shared.Projectiles;
+using JetBrains.FormatRipper.Elf;
 using Robust.Shared.Physics.Events;
 using Robust.Shared.Player;
 
@@ -43,7 +44,16 @@ public sealed class ProjectileSystem : SharedProjectileSystem
             SetShooter(uid, component, target);
             return;
         }
-
+        var blockattemptEv = new ProjectileBlockAttemptEvent(uid, component, false, component.Damage);
+        RaiseLocalEvent(target, blockattemptEv);
+        if (blockattemptEv.Cancelled)
+        {
+            SetShooter(uid, component, target);
+            QueueDel(uid);
+            _color.RaiseEffect(Color.Red, new List<EntityUid>() { target }, Filter.Pvs(target, entityManager: EntityManager));
+            _guns.PlayImpactSound(target, component.Damage, component.SoundHit, component.ForceSound);
+            return;
+        }
         var ev = new ProjectileHitEvent(component.Damage * _damageableSystem.UniversalProjectileDamageModifier, target, component.Shooter);
         RaiseLocalEvent(uid, ref ev);
 

@@ -1,10 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Numerics;
 using Content.Shared.ActionBlocker;
 using Content.Shared.Actions.Events;
 using Content.Shared.Administration.Components;
 using Content.Shared.Administration.Logs;
+using Content.Shared.Blocking;
 using Content.Shared.CombatMode;
 using Content.Shared.Damage;
 using Content.Shared.Damage.Events;
@@ -23,6 +21,7 @@ using Content.Shared.Mobs.Components;
 using Content.Shared.Mobs.Systems;
 using Content.Shared.Physics;
 using Content.Shared.Popups;
+using Content.Shared.SS220.Weapons.Melee.Events;
 using Content.Shared.Standing; // ss220 add block heavy attack while user is down
 using Content.Shared.StatusEffect;
 using Content.Shared.Weapons.Melee.Components;
@@ -40,6 +39,10 @@ using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
+using Robust.Shared.Toolshed.Syntax;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Numerics;
 using ItemToggleMeleeWeaponComponent = Content.Shared.Item.ItemToggle.Components.ItemToggleMeleeWeaponComponent;
 
 namespace Content.Shared.Weapons.Melee;
@@ -526,7 +529,18 @@ public abstract class SharedMeleeWeaponSystem : EntitySystem
         // Sawmill.Debug($"Melee damage is {damage.Total} out of {component.Damage.Total}");
 
         // Raise event before doing damage so we can cancel damage if the event is handled
-        var hitEvent = new MeleeHitEvent(new List<EntityUid> { target.Value }, user, meleeUid, damage, null);
+        EntityUid targetEntity = target.Value;
+        if(TryComp<BlockingUserComponent>(target, out var blockcomp))
+        {
+            var meleeblockEvent = new MeleeHitBlockAttemptEvent();
+            RaiseLocalEvent((EntityUid)target, meleeblockEvent);
+            if (meleeblockEvent.Cancelled && TryGetEntity(meleeblockEvent.blocker,out EntityUid? shield))
+            {
+                targetEntity = (EntityUid)shield;
+            }
+        }
+
+        var hitEvent = new MeleeHitEvent(new List<EntityUid> { targetEntity }, user, meleeUid, damage, null);
         RaiseLocalEvent(meleeUid, hitEvent);
 
         if (hitEvent.Handled)
@@ -534,7 +548,7 @@ public abstract class SharedMeleeWeaponSystem : EntitySystem
 
         var targets = new List<EntityUid>(1)
         {
-            target.Value
+            targetEntity
         };
 
         var weapon = GetEntity(ev.Weapon);
@@ -548,10 +562,10 @@ public abstract class SharedMeleeWeaponSystem : EntitySystem
 
         // For stuff that cares about it being attacked.
         var attackedEvent = new AttackedEvent(meleeUid, user, targetXform.Coordinates);
-        RaiseLocalEvent(target.Value, attackedEvent);
+        RaiseLocalEvent(targetEntity, attackedEvent);
 
         //ss220 extended weapon logic start
-        var weaponAttackEvent = new WeaponAttackEvent(user, target.Value, AttackType.LIGHT);
+        var weaponAttackEvent = new WeaponAttackEvent(user, targetEntity, AttackType.LIGHT);
         RaiseLocalEvent(meleeUid, weaponAttackEvent);
         //ss220 extended weapon logic end
 
@@ -561,30 +575,30 @@ public abstract class SharedMeleeWeaponSystem : EntitySystem
         // SS220 hook attack event end
 
         var modifiedDamage = DamageSpecifier.ApplyModifierSets(damage + hitEvent.BonusDamage + attackedEvent.BonusDamage, hitEvent.ModifiersList);
-        var damageResult = Damageable.TryChangeDamage(target, modifiedDamage, origin:user, ignoreResistances:resistanceBypass);
+        var damageResult = Damageable.TryChangeDamage(targetEntity, modifiedDamage, origin:user, ignoreResistances:resistanceBypass);
 
         if (damageResult is {Empty: false})
         {
             // If the target has stamina and is taking blunt damage, they should also take stamina damage based on their blunt to stamina factor
             if (damageResult.DamageDict.TryGetValue("Blunt", out var bluntDamage))
             {
-                _stamina.TakeStaminaDamage(target.Value, (bluntDamage * component.BluntStaminaDamageFactor).Float(), visual: false, source: user, with: meleeUid == user ? null : meleeUid);
+                _stamina.TakeStaminaDamage(targetEntity, (bluntDamage * component.BluntStaminaDamageFactor).Float(), visual: false, source: user, with: meleeUid == user ? null : meleeUid);
             }
 
             if (meleeUid == user)
             {
                 AdminLogger.Add(LogType.MeleeHit, LogImpact.High, // SS220 High-Attack-Logs
-                    $"{ToPrettyString(user):actor} melee attacked (light) {ToPrettyString(target.Value):subject} using their hands and dealt {damageResult.GetTotal():damage} damage");
+                    $"{ToPrettyString(user):actor} melee attacked (light) {ToPrettyString(targetEntity):subject} using their hands and dealt {damageResult.GetTotal():damage} damage");
             }
             else
             {
                 AdminLogger.Add(LogType.MeleeHit, LogImpact.High, // SS220 High-Attack-Logs
-                    $"{ToPrettyString(user):actor} melee attacked (light) {ToPrettyString(target.Value):subject} using {ToPrettyString(meleeUid):tool} and dealt {damageResult.GetTotal():damage} damage");
+                    $"{ToPrettyString(user):actor} melee attacked (light) {ToPrettyString(targetEntity):subject} using {ToPrettyString(meleeUid):tool} and dealt {damageResult.GetTotal():damage} damage");
             }
 
         }
 
-        _meleeSound.PlayHitSound(target.Value, user, GetHighestDamageSound(modifiedDamage, _protoManager), hitEvent.HitSoundOverride, component);
+        _meleeSound.PlayHitSound(targetEntity, user, GetHighestDamageSound(modifiedDamage, _protoManager), hitEvent.HitSoundOverride, component);
 
         if (damageResult?.GetTotal() > FixedPoint2.Zero)
         {
@@ -667,8 +681,17 @@ public abstract class SharedMeleeWeaponSystem : EntitySystem
             if (entity == user ||
                 !damageQuery.HasComponent(entity))
                 continue;
-
-            targets.Add(entity);
+            if (TryComp<BlockingUserComponent>(entity, out var blockcomp))
+            {
+                var meleeblockEvent = new MeleeHitBlockAttemptEvent();
+                RaiseLocalEvent(entity, meleeblockEvent);
+                if (meleeblockEvent.Cancelled && TryGetEntity(meleeblockEvent.blocker, out EntityUid? shield))
+                {
+                    targets.Add((EntityUid)shield);
+                }
+                else { targets.Add(entity); }
+            }
+            else { targets.Add(entity); }
         }
 
         // Sawmill.Debug($"Melee damage is {damage.Total} out of {component.Damage.Total}");
@@ -723,7 +746,6 @@ public abstract class SharedMeleeWeaponSystem : EntitySystem
             // SS220 hook attack event end
 
             var modifiedDamage = DamageSpecifier.ApplyModifierSets(damage + hitEvent.BonusDamage + attackedEvent.BonusDamage, hitEvent.ModifiersList);
-
             var damageResult = Damageable.TryChangeDamage(entity, modifiedDamage, origin: user, ignoreResistances: resistanceBypass);
 
             if (damageResult != null && damageResult.GetTotal() > FixedPoint2.Zero)

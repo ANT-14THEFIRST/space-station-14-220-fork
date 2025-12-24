@@ -13,13 +13,7 @@ public sealed class ItemToggleBlockingDamageSystem : EntitySystem
 
     private void OnDecreaseBlock(Entity<ItemToggleBlockingDamageComponent> ent, BlockingComponent blockingComponent)
     {
-        if (ent.Comp.DeactivatedPassiveModifier != null)
-            blockingComponent.PassiveBlockDamageModifer = ent.Comp.DeactivatedPassiveModifier;
-        if (ent.Comp.DeactivatedActiveModifier != null)
-            blockingComponent.ActiveBlockDamageModifier = ent.Comp.DeactivatedActiveModifier;
 
-        blockingComponent.ActiveBlockFraction = ent.Comp.DeactivatedActiveFraction;
-        blockingComponent.PassiveBlockFraction = ent.Comp.DeactivatedPassiveFraction;
 
         Dirty(ent);
     }
@@ -31,11 +25,7 @@ public sealed class ItemToggleBlockingDamageSystem : EntitySystem
             return;
         }
 
-        ent.Comp.OriginalActiveModifier = blockingComponent.ActiveBlockDamageModifier;
-        ent.Comp.OriginalPassiveModifier = blockingComponent.PassiveBlockDamageModifer;
-        ent.Comp.OriginalActivatedFraction = blockingComponent.ActiveBlockFraction;
-        ent.Comp.OriginalDeactivatedFraction = blockingComponent.PassiveBlockFraction;
-
+        //ent.Comp.OriginalActiveModifier = blockingComponent.ActiveBlockDamageModifier;
         OnDecreaseBlock(ent, blockingComponent);
     }
 
@@ -46,14 +36,6 @@ public sealed class ItemToggleBlockingDamageSystem : EntitySystem
 
         if (args.Activated)
         {
-            if (ent.Comp.OriginalPassiveModifier != null)
-                blockingComponent.PassiveBlockDamageModifer = ent.Comp.OriginalPassiveModifier;
-            if (ent.Comp.OriginalActiveModifier != null)
-                blockingComponent.ActiveBlockDamageModifier = ent.Comp.OriginalActiveModifier;
-
-            blockingComponent.ActiveBlockFraction = ent.Comp.OriginalActivatedFraction;
-            blockingComponent.PassiveBlockFraction = ent.Comp.OriginalDeactivatedFraction;
-
             Dirty(ent);
         }
         else

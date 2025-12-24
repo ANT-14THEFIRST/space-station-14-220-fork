@@ -1,4 +1,5 @@
 using Content.Shared.Damage;
+using Content.Shared.FixedPoint;
 using Content.Shared.Inventory;
 using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
@@ -29,25 +30,29 @@ public sealed partial class BlockingComponent : Component
     /// <summary>
     /// The ID for the fixture that's dynamically created when blocking
     /// </summary>
-    public const string BlockFixtureID = "blocking-active";
+    //public const string BlockFixtureID = "blocking-active";
 
     /// <summary>
     /// The shape of the blocking fixture that will be dynamically spawned
     /// </summary>
-    [DataField]
-    public IPhysShape Shape = new PhysShapeCircle(0.5f);
+    //[DataField]
+    //public IPhysShape Shape = new PhysShapeCircle(0.5f);
+
+    // SS220 shield rework begin
 
     /// <summary>
     /// The damage modifer to use while passively blocking
     /// </summary>
-    [DataField("passiveBlockModifier", required: true)]
-    public DamageModifierSet PassiveBlockDamageModifer = default!;
+    //[DataField("passiveBlockModifier", required: true)]
+    //public DamageModifierSet PassiveBlockDamageModifer = default!;
 
     /// <summary>
     /// The damage modifier to use while actively blocking.
     /// </summary>
-    [DataField("activeBlockModifier", required: true)]
-    public DamageModifierSet ActiveBlockDamageModifier = default!;
+    //[DataField("activeBlockModifier", required: true)]
+    //public DamageModifierSet ActiveBlockDamageModifier = default!;
+
+    // SS220 shield rework end
 
     [DataField]
     public EntProtoId BlockingToggleAction = "ActionToggleBlock";
@@ -86,4 +91,24 @@ public sealed partial class BlockingComponent : Component
     [DataField]
     public Dictionary<SlotFlags, float> AvaliableSlots = new();
     // SS220 equip shield on back end
+
+    // SS220 shield rework begin
+    [DataField, AutoNetworkedField]
+    public int Layer = 0;
+
+    [DataField, AutoNetworkedField]
+    public bool Outer = true;//if the damage should not be passed forward to other armor layers
+
+    [DataField, AutoNetworkedField]
+    public float RangeBlockProb = 1f;
+
+    [DataField, AutoNetworkedField]
+    public float ActiveRangeBlockProb = 1f;
+
+    [DataField, AutoNetworkedField]
+    public float MeleeBlockProb = 1f;
+
+    [DataField, AutoNetworkedField]
+    public float ActiveMeleeBlockProb = 1f; 
+    // SS220 shield rework end
 }
