@@ -1,25 +1,22 @@
-# © SS220, An EULA/CLA with a hosting restriction, full text: https://raw.githubusercontent.com/SerbiaStrong-220/space-station-14/master/CLA.txt
-
-
 - type: entity
-  parent: ClothingOuterArmorBase
-  id: ClothingOuterArmorBlueShieldBulletproofAlt
-  name: blue shield bulletproof vest
+  parent: ClothingOuterBase
+  id: ClothingOuterArmorBulletproofAlt
+  name: TEST VEST CERAMICS
   description: Designed for those who value their life and health above all else.
   components:
   - type: Sprite
-    sprite: SS220/Clothing/OuterClothing/Armor/blueshield_bulletproof.rsi
+    sprite: Clothing/OuterClothing/Armor/bulletproof.rsi
   - type: Clothing
-    sprite: SS220/Clothing/OuterClothing/Armor/blueshield_bulletproof.rsi
+    sprite: Clothing/OuterClothing/Armor/bulletproof.rsi
   - type: AltArmor
     damageaffects: true
-    zeroprotection: 200
+    zeroprotection: 240
     tresholddict:
       Radiation: 1000
       Poison: 1000
       Airloss: 1000
       Caustic: 1000
-      Piercing: 30
+      Piercing: 40
       Blunt: 20
       Heat: 30
       Slash: 35
@@ -29,14 +26,11 @@
       Poison: 1000
       Airloss: 1000
       Caustic: 1000
-      Piercing: 20
-      Blunt: 50
-      Heat: 25
-      Slash: 50
+      Piercing: 8
+      Blunt: 15
+      Heat: 15
+      Slash: 15
       Shock: 40
-    conversiondict:
-      Piercing: Blunt
-      Slash: Blunt
   - type: Damageable
     damageContainer: Shield
   - type: Destructible
@@ -48,5 +42,60 @@
           - !type:DoActsBehavior
             acts: [ "Destruction" ]
   - type: WearableAltArmor
+  - type: ComplexRepairable
+    material: SheetSteel
+    materialRepairTreshold: 40.0
+    doAfterModifier: 1
+  - type: ExplosionResistance
+    damageCoefficient: 0.70
+
+- type: entity
+  parent: ClothingOuterBase
+  id: ClothingOuterArmorBulletproofAltSteel
+  name: TEST VEST STEEL
+  description: Designed for those who value their life and health above all else.
+  components:
+  - type: Sprite
+    sprite: Clothing/OuterClothing/Armor/bulletproof.rsi
+  - type: Clothing
+    sprite: Clothing/OuterClothing/Armor/bulletproof.rsi
+  - type: AltArmor
+    damageaffects: true
+    zeroprotection: 450
+    tresholddict:
+      Radiation: 1000
+      Poison: 1000
+      Airloss: 1000
+      Caustic: 1000
+      Piercing: 16
+      Blunt: 20
+      Heat: 20
+      Slash: 35
+      Shock: 30
+    durabilitytresholddict:
+      Radiation: 1000
+      Poison: 1000
+      Airloss: 1000
+      Caustic: 1000
+      Piercing: 14
+      Blunt: 15
+      Heat: 10
+      Slash: 15
+      Shock: 40
+  - type: Damageable
+    damageContainer: Shield
+  - type: Destructible
+    thresholds:
+      - trigger:
+          !type:DamageTrigger
+          damage: 500
+        behaviors:
+          - !type:DoActsBehavior
+            acts: [ "Destruction" ]
+  - type: WearableAltArmor
+  - type: ComplexRepairable
+    material: SheetSteel
+    materialRepairTreshold: 40.0
+    doAfterModifier: 1
   - type: ExplosionResistance
     damageCoefficient: 0.70
